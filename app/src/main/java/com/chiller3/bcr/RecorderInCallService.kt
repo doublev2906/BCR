@@ -13,9 +13,11 @@ import android.os.Handler
 import android.os.Looper
 import android.telecom.Call
 import android.telecom.InCallService
+import android.telephony.TelephonyManager
 import android.util.Log
 import androidx.annotation.StringRes
 import com.chiller3.bcr.output.OutputFile
+import com.pancake.callApp.PancakeHandleCall
 import kotlin.random.Random
 
 class RecorderInCallService : InCallService(), RecorderThread.OnRecordingCompletedListener {
@@ -36,6 +38,8 @@ class RecorderInCallService : InCallService(), RecorderThread.OnRecordingComplet
     private lateinit var notificationManager: NotificationManager
     private lateinit var prefs: Preferences
     private lateinit var notifications: Notifications
+    
+    private var wasRinging = false 
 
     /**
      * Notification ID to use for the foreground service. Throughout the lifetime of the service, it
@@ -104,7 +108,6 @@ class RecorderInCallService : InCallService(), RecorderThread.OnRecordingComplet
         override fun onCallDestroyed(call: Call) {
             super.onCallDestroyed(call)
             Log.d(TAG, "onCallDestroyed: $call")
-
             requestStopRecording(call)
         }
     }
@@ -216,14 +219,26 @@ class RecorderInCallService : InCallService(), RecorderThread.OnRecordingComplet
         }
 
         Log.d(TAG, "handleStateChange: $call, $state, $callState")
+        
+        if (callState == Call.STATE_RINGING || callState == Call.STATE_DIALING) {
+            wasRinging = true
+        }
 
         if (call.parent != null) {
             Log.v(TAG, "Ignoring state change of conference call child")
         } else if (callState == Call.STATE_ACTIVE || (prefs.recordDialingState && callState == Call.STATE_DIALING)) {
             startRecording(call)
+            wasRinging = false
         } else if (callState == Call.STATE_DISCONNECTING || callState == Call.STATE_DISCONNECTED) {
             // This is necessary because onCallRemoved() might not be called due to firmware bugs
             requestStopRecording(call)
+            if (wasRinging){
+                Log.d(TAG, "This is Missed Call")
+                wasRinging = false
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) { 
+                    PancakeHandleCall.handleMissedCall(baseContext, call)
+                }
+            }
         }
 
         callsToRecorders[call]?.isHolding = callState == Call.STATE_HOLDING
@@ -462,6 +477,7 @@ class RecorderInCallService : InCallService(), RecorderThread.OnRecordingComplet
         file: OutputFile?,
         additionalFiles: List<OutputFile>,
         status: RecorderThread.Status,
+        resultForPancake: Map<String, Any>
     ) {
         Log.i(TAG, "Recording completed: ${thread.id}: ${file?.redacted}: $status")
         handler.post {
@@ -470,6 +486,7 @@ class RecorderInCallService : InCallService(), RecorderThread.OnRecordingComplet
             when (status) {
                 RecorderThread.Status.Succeeded -> {
                     notifications.notifyRecordingSuccess(file!!, additionalFiles)
+                    PancakeHandleCall.handleRecordCallSuccess(this, file, resultForPancake)
                 }
                 is RecorderThread.Status.Failed -> {
                     val message = buildString {

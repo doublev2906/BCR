@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
+include(":app")
+
 pluginManagement {
     repositories {
         gradlePluginPortal()

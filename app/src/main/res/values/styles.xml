@@ -7,4 +7,7 @@
     <style name="SwitchPreferenceCompat.Material3" parent="Preference.SwitchPreferenceCompat.Material">
         <item name="android:widgetLayout">@layout/material_switch_preference</item>
     </style>
+    <style name="AppSearchView" parent="Widget.AppCompat.SearchView" >
+        <item name="android:textSize">12sp</item>
+    </style>
 </resources>

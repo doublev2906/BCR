@@ -10,6 +10,7 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
@@ -88,6 +89,7 @@ class SettingsFragment : PreferenceBaseFragment(), Preference.OnPreferenceChange
         // denied. The user will have to grant permissions again to re-enable the features.
 
         prefCallRecording = findPreference(Preferences.PREF_CALL_RECORDING)!!
+        Log.d("SettingsFragment", prefs.isCallRecordingEnabled.toString())
         if (prefCallRecording.isChecked && !Permissions.haveRequired(context)) {
             prefCallRecording.isChecked = false
         }

@@ -1,11 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-    SPDX-FileCopyrightText: 2022-2024 Andrew Gunnerson
-    SPDX-License-Identifier: GPL-3.0-only
--->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
-
     <!-- This system app permission is required to capture the call audio stream -->
     <uses-permission
         android:name="android.permission.CAPTURE_AUDIO_OUTPUT"
@@ -29,27 +24,30 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.INTERNET" />
 
-    <!--
-        We use android:usesNonSdkApi to bypass Android's hidden API restrictions instead of creating
-        a sysconfig file with <hidden-api-whitelisted-app>. This is necessary because some custom
-        Android builds have a bug where the sysconfig file is only sometimes respected, leading to
-        intermittent app crashes.
-    -->
-    <!--suppress AndroidUnknownAttribute -->
     <application
         android:name=".RecorderApplication"
-        android:usesNonSdkApi="true"
         android:allowBackup="true"
+        android:enableOnBackInvokedCallback="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:enableOnBackInvokedCallback="true"
+        android:localeConfig="@xml/locales_config"
         android:memtagMode="sync"
+        android:requestLegacyExternalStorage="true"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.BCR"
-        android:localeConfig="@xml/locales_config"
+        android:usesNonSdkApi="true"
         tools:ignore="UnusedAttribute">
+        <activity
+            android:name="com.pancake.callApp.view.HomeActivity"
+            android:exported="false" />
+        <activity
+            android:name="com.pancake.callApp.view.WebViewActivity"
+            android:exported="false"
+            android:label="@string/title_activity_web_view"
+            android:theme="@style/Theme.BCR" />
 
         <service
             android:name=".NotificationActionService"
@@ -67,19 +65,17 @@
         <service
             android:name=".DirectBootMigrationService"
             android:exported="false" />
-
         <service
             android:name=".RecorderInCallService"
+            android:directBootAware="true"
             android:enabled="true"
             android:exported="true"
             android:foregroundServiceType="microphone"
-            android:directBootAware="true"
             android:permission="android.permission.BIND_INCALL_SERVICE">
             <intent-filter>
                 <action android:name="android.telecom.InCallService" />
             </intent-filter>
         </service>
-
         <service
             android:name=".RecorderTileService"
             android:enabled="true"
@@ -87,37 +83,53 @@
             android:icon="@drawable/ic_launcher_quick_settings"
             android:label="@string/quick_settings_label"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
-        <meta-data
-            android:name="android.service.quicksettings.TOGGLEABLE_TILE"
-            android:value="true" />
+            <meta-data
+                android:name="android.service.quicksettings.TOGGLEABLE_TILE"
+                android:value="true" />
+
             <intent-filter>
                 <action android:name="android.service.quicksettings.action.QS_TILE" />
             </intent-filter>
         </service>
 
         <provider
-            android:authorities="@string/provider_authority"
             android:name=".RecorderProvider"
+            android:authorities="@string/provider_authority"
             android:exported="false"
-            android:grantUriPermissions="true">
-        </provider>
+            android:grantUriPermissions="true" />
 
         <activity
-            android:name=".settings.SettingsActivity"
-            android:exported="true">
+            android:name="com.pancake.callApp.view.MainActivity"
+            android:exported="true"
+            tools:ignore="AppLinkUrlError">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
+            <intent-filter android:label="Pancake_deep_link">
+                <action android:name="android.intent.action.VIEW" />
 
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <!-- Chấp nhận các URI bắt đầu với "example://gizmos” -->
+                <data
+                    android:host="/"
+                    android:scheme="example" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".settings.SettingsActivity"
+            android:exported="true" />
         <activity
             android:name=".rule.PickContactGroupActivity"
             android:exported="false" />
-
+        <activity
+            android:name="com.pancake.callApp.view.LoginActivity"
+            android:exported="true" />
         <activity
             android:name=".rule.RecordRulesActivity"
             android:exported="false" />
     </application>
+
 </manifest>

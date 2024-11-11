@@ -6,16 +6,20 @@
 package com.chiller3.bcr
 
 import android.app.Application
+import android.content.Context
 import android.util.Log
 import androidx.core.net.toFile
 import com.chiller3.bcr.output.OutputDirUtils
 import com.google.android.material.color.DynamicColors
+import com.pancake.callApp.database.PancakeDatabase
 
 class RecorderApplication : Application() {
+
     override fun onCreate() {
         super.onCreate()
-
+        appContext = applicationContext
         Logcat.init(this)
+        PancakeDatabase.init(this)
 
         val oldCrashHandler = Thread.getDefaultUncaughtExceptionHandler()
 
@@ -53,5 +57,9 @@ class RecorderApplication : Application() {
 
     companion object {
         private val TAG = RecorderApplication::class.java.simpleName
+        private var appContext: Context? = null
+        fun getAppContext(): Context {
+            return this.appContext!!
+        }
     }
 }

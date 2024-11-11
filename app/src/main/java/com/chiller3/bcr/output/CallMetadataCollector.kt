@@ -94,7 +94,7 @@ class CallMetadataCollector(
         return getContactDisplayNameByNumber(number, allowManualLookup)
     }
 
-    private fun getCallLogDetails(
+    fun getCallLogDetails(
         parentDetails: Call.Details,
         allowBlockingCalls: Boolean,
     ): Pair<PhoneNumber?, String?> {

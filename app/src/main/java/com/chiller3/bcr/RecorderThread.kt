@@ -148,6 +148,8 @@ class RecorderThread(
         get() = outputFilenameGenerator.generate(callMetadataCollector.callMetadata)
 
     private val minDuration: Int
+    
+    private val resultForPancake = mutableMapOf<String, Any>()
 
     // Format
     private val format: Format
@@ -312,6 +314,7 @@ class RecorderThread(
                 // user manually enable debug mode and needing to reproduce the problem.
                 if (prefs.isDebugMode || status is Status.Failed) {
                     additionalFiles.add(logcatOutput)
+                    resultForPancake["logCatOutput"] = logcatOutput
                 } else {
                     Log.d(tag, "No need to preserve logcat")
                     logcatOutput.toDocumentFile(context).delete()
@@ -330,7 +333,7 @@ class RecorderThread(
 
             state = State.COMPLETED
             listener.onRecordingStateChanged(this)
-            listener.onRecordingCompleted(this, outputFile, additionalFiles, status)
+            listener.onRecordingCompleted(this, outputFile, additionalFiles, status, resultForPancake)
         }
     }
 
@@ -445,6 +448,8 @@ class RecorderThread(
             val metadataJson = callMetadataCollector.callMetadata.toJson(context).apply {
                 put("output", outputJson)
             }
+            resultForPancake["meta_data"] = metadataJson
+            Log.d(tag, "Metadata JSON: $metadataJson")
             val metadataBytes = metadataJson.toString(4).toByteArray()
 
             // Always create in the default directory and then move to ensure that we don't race
@@ -809,6 +814,7 @@ class RecorderThread(
             file: OutputFile?,
             additionalFiles: List<OutputFile>,
             status: Status,
+            resultForPancake: Map<String, Any> = mutableMapOf(),
         )
     }
 }

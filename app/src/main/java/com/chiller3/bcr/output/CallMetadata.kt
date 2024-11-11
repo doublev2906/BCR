@@ -40,7 +40,7 @@ data class CallPartyDetails(
 
 data class CallMetadata(
     val timestamp: ZonedDateTime,
-    val direction: CallDirection?,
+    var direction: CallDirection?,
     val simCount: Int?,
     val simSlot: Int?,
     val callLogName: String?,

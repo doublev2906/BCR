@@ -22,9 +22,7 @@ val AudioFormat.frameSizeInBytesCompat: Int
 // allow access to these hidden fields.
 
 @SuppressLint("SoonBlockedPrivateApi")
-val SAMPLE_RATE_HZ_MIN_COMPAT: Int =
-    AudioFormat::class.java.getDeclaredField("SAMPLE_RATE_HZ_MIN").getInt(null)
+val SAMPLE_RATE_HZ_MIN_COMPAT: Int = 4000
 
 @SuppressLint("SoonBlockedPrivateApi")
-val SAMPLE_RATE_HZ_MAX_COMPAT: Int =
-    AudioFormat::class.java.getDeclaredField("SAMPLE_RATE_HZ_MAX").getInt(null)
+val SAMPLE_RATE_HZ_MAX_COMPAT: Int = 48000
