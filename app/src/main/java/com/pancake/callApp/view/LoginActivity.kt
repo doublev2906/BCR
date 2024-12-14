@@ -14,6 +14,7 @@ import androidx.lifecycle.lifecycleScope
 import com.chiller3.bcr.Permissions
 import com.chiller3.bcr.Preferences
 import com.chiller3.bcr.databinding.PancakeLoginActivityBinding
+import com.chiller3.bcr.format.Format
 import com.google.gson.Gson
 import com.pancake.callApp.PancakePreferences
 import com.pancake.callApp.network.APIClient
@@ -50,6 +51,8 @@ class LoginActivity : AppCompatActivity() {
             setButtonToDefault()
         }
     }
+    
+    
 
     private fun setButtonToDefault() {
         runOnUiThread {
@@ -67,18 +70,19 @@ class LoginActivity : AppCompatActivity() {
                 val response = APIClient.client.me().awaitResponse()
                 if (response.isSuccessful) {
                     response.body()?.user?.let { user ->
+                        Log.d(TAG, "User: $user")
                         PancakePreferences(this@LoginActivity).user = user
                         startActivity(Intent(this@LoginActivity, HomeActivity::class.java))
                         finish()
                     }
                 } else {
                     setButtonToDefault()
-                    Toast.makeText(this@LoginActivity, "Đã xảy ra lỗi ${response.code()}", Toast.LENGTH_LONG).show()
+//                    Toast.makeText(this@LoginActivity, "Đã xảy ra lỗi ${response.code()}", Toast.LENGTH_LONG).show()
                     Log.e( TAG, "Error: ${response.code()}")
                 }
             } catch (e: Exception) {
                 setButtonToDefault()
-                Toast.makeText(this@LoginActivity, "Đã xảy ra lỗi $e", Toast.LENGTH_LONG).show()
+//                Toast.makeText(this@LoginActivity, "Đã xảy ra lỗi $e", Toast.LENGTH_LONG).show()
                 Log.e(TAG, "Exception: $e")
             }
         }
@@ -115,9 +119,13 @@ class LoginActivity : AppCompatActivity() {
         if (!bcrPref.writeMetadata) {
             bcrPref.writeMetadata = true
         }
+        bcrPref.format = Format.getByName("WAV/PCM")
     }
 
     private fun loginPancakeAccount() {
+//        PancakePreferences(this).accessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDE4Mzk1MjIsImlhdCI6MTczNDA2MzUyMiwiaWQiOiIxMmRhNTkzZC0xN2Q0LTRjMzktYTE4NS02ZDY1ZTdlMDllMWYiLCJuYW1lIjoiTkFOQSJ9.qMowstjvnkOZeHgYLs1iVxixgr0iH6dNQpzoBA8qoMc"
+//        fetchUser()
+//        return;
         val stateMap = mapOf(
             "mobile_login" to true,
             "country" to "VN",

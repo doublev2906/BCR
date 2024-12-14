@@ -59,5 +59,10 @@ object PancakeHandleCall {
         Log.d(TAG, "phoneNumber: $phoneNumber direction: $direction")
         Log.d(TAG, "handleMissedCall: ${call.details}")
     }
+    
+    fun pushCallToServer(call: MutableMap<Any, Any>) {
+        
+        
+    }
 
 }

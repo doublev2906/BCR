@@ -13,6 +13,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 
 internal object APIClient {
+//    private const val BASE_URL = "http://192.168.1.29:4005/api/"
     private const val BASE_URL = "https://hub.internal.pancake.vn/api/"
 
     val client: APIInterface
@@ -30,6 +31,7 @@ internal object APIClient {
                         .addQueryParameter("access_token", accessToken)
                         .build() 
 
+                    Log.d("APIClient", "get: $url")
                     // Request customization: add request headers
                     val requestBuilder: Request.Builder = original.newBuilder()
                         .url(url)

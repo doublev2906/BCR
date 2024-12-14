@@ -48,10 +48,14 @@ class PancakePreferences(context: Context) {
             }
         }
 
+    var lastTimeLogsPushed: Long
+        get() = sharedPreferences.getLong(LAST_TIME_LOGS_PUSHED, 0)
+        set(value) = sharedPreferences.edit().putLong(LAST_TIME_LOGS_PUSHED, value).apply()
 
     companion object {
         private const val LOCAL_STORAGE_KEY = "PANCAKE_LOCAL_STORAGE"
         private const val TAG = "PANCAKE_PREFS"
         private const val USER_TOKEN = "USER_TOKEN"
+        private const val LAST_TIME_LOGS_PUSHED = "LAST_TIME_LOGS_PUSHED"
     }
 }

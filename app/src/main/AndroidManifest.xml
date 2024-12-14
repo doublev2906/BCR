@@ -39,6 +39,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.BCR"
         android:usesNonSdkApi="true"
+        android:usesCleartextTraffic="true"
         tools:ignore="UnusedAttribute">
         <activity
             android:name="com.pancake.callApp.view.HomeActivity"
@@ -92,6 +93,9 @@
             </intent-filter>
         </service>
 
+        <service android:name="com.pancake.callApp.PancakeBackgroundService"
+            android:enabled="true"
+            android:exported="true"/>
         <provider
             android:name=".RecorderProvider"
             android:authorities="@string/provider_authority"

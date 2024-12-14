@@ -78,7 +78,7 @@ class HomeActivity : AppCompatActivity() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 super.onScrolled(recyclerView, dx, dy)
                 val lastVisibleItemPosition = (recyclerView.layoutManager as LinearLayoutManager).findLastVisibleItemPosition()
-                if (lastVisibleItemPosition == listCallAdapter.itemCount - 1) {
+                if (lastVisibleItemPosition == listCallAdapter.itemCount - 1 && listCallAdapter.itemCount >= (page +1) * 30) {
                     page++
                     loadCallLogs()
                 }
@@ -105,11 +105,15 @@ class HomeActivity : AppCompatActivity() {
             try {
                 val callLogs : List<CallLogWithCalls> = PancakeDatabase.getAllCallLogs(page = page)
                 runOnUiThread {
-                    listCallAdapter.callList = callLogs
-                    listCallAdapter.notifyDataSetChanged()
                     if (isFirstLoading) {
+                        listCallAdapter.callList = callLogs
+                        listCallAdapter.notifyDataSetChanged()
                         binding.loadingCall.visibility = View.GONE
                         binding.swipeRefreshLayout.isRefreshing = false
+                    } else {
+                        val currentSize = listCallAdapter.callList.size
+                        listCallAdapter.callList += callLogs
+                        listCallAdapter.notifyItemRangeInserted(currentSize, callLogs.size)
                     }
                 }
             } catch (e: Exception) {

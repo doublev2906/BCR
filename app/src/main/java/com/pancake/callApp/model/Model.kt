@@ -21,3 +21,8 @@ data class MeResponse(
     @SerializedName("status") var status: String? = null,
     @SerializedName("user") var user: User? = User()
 )
+
+data class UploadCallRecordResponse(
+    @SerializedName("success") var success: Boolean = false,
+    @SerializedName("id") var id: String? = null
+)
