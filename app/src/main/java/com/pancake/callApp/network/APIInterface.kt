@@ -13,6 +13,7 @@ import retrofit2.http.GET
 import retrofit2.http.Multipart
 import retrofit2.http.POST
 import retrofit2.http.Part
+import retrofit2.http.PartMap
 
 
 interface APIInterface {
@@ -22,11 +23,7 @@ interface APIInterface {
     @Multipart
     @POST("call_recordings")
     fun uploadCallRecordings(
-        @Part("direction") direction: RequestBody,
-        @Part("phone_number") phoneNumber: RequestBody,
-        @Part("duration") duration: RequestBody,
-        @Part("timestamp") timestamp: RequestBody,
-        @Part("file_type") fileType: RequestBody? = "audio/wav".toRequestBody("text/plain".toMediaTypeOrNull()),
+        @PartMap data: Map<String, @JvmSuppressWildcards RequestBody>,
         @Part file: MultipartBody.Part?
     ): Call<UploadCallRecordResponse>
 }                                                   

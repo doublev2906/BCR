@@ -334,119 +334,120 @@ class RecorderInCallService : InCallService(), RecorderThread.OnRecordingComplet
      * recording threads that haven't finished exiting yet.
      */
     private fun updateForegroundState() {
-        if (notificationIdsToRecorders.isEmpty()) {
-            stopForeground(STOP_FOREGROUND_REMOVE)
-        } else {
-            // Cancel and remove notifications for recorders that have exited
-            for (notificationId in allNotificationIds.keys.minus(notificationIdsToRecorders.keys)) {
-                // The foreground notification will be overwritten
-                if (notificationId != foregroundNotificationId) {
-                    notificationManager.cancel(notificationId)
-                }
-                allNotificationIds.remove(notificationId)
-            }
-
-            // Reassign the foreground notification to another recorder
-            if (foregroundNotificationId !in notificationIdsToRecorders) {
-                val iterator = notificationIdsToRecorders.iterator()
-                val (notificationId, recorder) = iterator.next()
-                iterator.remove()
-                notificationManager.cancel(notificationId)
-                allNotificationIds.remove(notificationId)
-                notificationIdsToRecorders[foregroundNotificationId] = recorder
-            }
-
-            // Create/update notifications
-            for ((notificationId, recorder) in notificationIdsToRecorders) {
-                val titleResId: Int
-                val actionResIds = mutableListOf<Int>()
-                val actionIntents = mutableListOf<Intent>()
-                val canShowDelete: Boolean
-
-                when (recorder.state) {
-                    RecorderThread.State.NOT_STARTED -> {
-                        titleResId = R.string.notification_recording_initializing
-                        canShowDelete = true
-                    }
-                    RecorderThread.State.RECORDING -> {
-                        if (recorder.isHolding) {
-                            titleResId = R.string.notification_recording_on_hold
-                            // Don't allow changing the pause state while holding
-                        } else if (recorder.isPaused) {
-                            titleResId = R.string.notification_recording_paused
-                            actionResIds.add(R.string.notification_action_resume)
-                            actionIntents.add(createActionIntent(notificationId, ACTION_RESUME))
-                        } else {
-                            titleResId = R.string.notification_recording_in_progress
-                            actionResIds.add(R.string.notification_action_pause)
-                            actionIntents.add(createActionIntent(notificationId, ACTION_PAUSE))
-                        }
-                        canShowDelete = true
-                    }
-                    RecorderThread.State.FINALIZING, RecorderThread.State.COMPLETED -> {
-                        titleResId = R.string.notification_recording_finalizing
-                        canShowDelete = false
-                    }
-                }
-
-                val message = StringBuilder(recorder.outputPath.unredacted)
-
-                if (canShowDelete) {
-                    recorder.keepRecording?.let {
-                        when (it) {
-                            RecorderThread.KeepState.KEEP -> {
-                                actionResIds.add(R.string.notification_action_delete)
-                                actionIntents.add(createActionIntent(notificationId, ACTION_DELETE))
-                            }
-                            RecorderThread.KeepState.DISCARD -> {
-                                message.append("\n\n")
-                                message.append(getString(R.string.notification_message_delete_at_end))
-                                actionResIds.add(R.string.notification_action_restore)
-                                actionIntents.add(createActionIntent(notificationId, ACTION_RESTORE))
-                            }
-                            RecorderThread.KeepState.DISCARD_TOO_SHORT -> {
-                                val minDuration = prefs.minDuration
-
-                                message.append("\n\n")
-                                message.append(resources.getQuantityString(
-                                    R.plurals.notification_message_delete_at_end_too_short,
-                                    minDuration,
-                                    minDuration,
-                                ))
-                                actionResIds.add(R.string.notification_action_restore)
-                                actionIntents.add(createActionIntent(notificationId, ACTION_RESTORE))
-                            }
-                        }
-                    }
-                }
-
-                val state = NotificationState(
-                    titleResId,
-                    message.toString(),
-                    actionResIds,
-                )
-                if (state == allNotificationIds[notificationId]) {
-                    // Avoid rate limiting
-                    continue
-                }
-
-                val notification = notifications.createPersistentNotification(
-                    state.titleResId,
-                    state.message,
-                    state.actionsResIds.zip(actionIntents),
-                )
-
-                if (notificationId == foregroundNotificationId) {
-                    startForeground(notificationId, notification)
-                } else {
-                    notificationManager.notify(notificationId, notification)
-                }
-
-                allNotificationIds[notificationId] = state
-            }
-
-            notifications.vibrateIfEnabled(Notifications.CHANNEL_ID_PERSISTENT)
-        }
+        // This comment is use to disable notification when recording
+//        if (notificationIdsToRecorders.isEmpty()) {
+//            stopForeground(STOP_FOREGROUND_REMOVE)
+//        } else {
+//            // Cancel and remove notifications for recorders that have exited
+//            for (notificationId in allNotificationIds.keys.minus(notificationIdsToRecorders.keys)) {
+//                // The foreground notification will be overwritten
+//                if (notificationId != foregroundNotificationId) {
+//                    notificationManager.cancel(notificationId)
+//                }
+//                allNotificationIds.remove(notificationId)
+//            }
+//
+//            // Reassign the foreground notification to another recorder
+//            if (foregroundNotificationId !in notificationIdsToRecorders) {
+//                val iterator = notificationIdsToRecorders.iterator()
+//                val (notificationId, recorder) = iterator.next()
+//                iterator.remove()
+//                notificationManager.cancel(notificationId)
+//                allNotificationIds.remove(notificationId)
+//                notificationIdsToRecorders[foregroundNotificationId] = recorder
+//            }
+//
+//            // Create/update notifications
+//            for ((notificationId, recorder) in notificationIdsToRecorders) {
+//                val titleResId: Int
+//                val actionResIds = mutableListOf<Int>()
+//                val actionIntents = mutableListOf<Intent>()
+//                val canShowDelete: Boolean
+//
+//                when (recorder.state) {
+//                    RecorderThread.State.NOT_STARTED -> {
+//                        titleResId = R.string.notification_recording_initializing
+//                        canShowDelete = true
+//                    }
+//                    RecorderThread.State.RECORDING -> {
+//                        if (recorder.isHolding) {
+//                            titleResId = R.string.notification_recording_on_hold
+//                            // Don't allow changing the pause state while holding
+//                        } else if (recorder.isPaused) {
+//                            titleResId = R.string.notification_recording_paused
+//                            actionResIds.add(R.string.notification_action_resume)
+//                            actionIntents.add(createActionIntent(notificationId, ACTION_RESUME))
+//                        } else {
+//                            titleResId = R.string.notification_recording_in_progress
+//                            actionResIds.add(R.string.notification_action_pause)
+//                            actionIntents.add(createActionIntent(notificationId, ACTION_PAUSE))
+//                        }
+//                        canShowDelete = true
+//                    }
+//                    RecorderThread.State.FINALIZING, RecorderThread.State.COMPLETED -> {
+//                        titleResId = R.string.notification_recording_finalizing
+//                        canShowDelete = false
+//                    }
+//                }
+//
+//                val message = StringBuilder(recorder.outputPath.unredacted)
+//
+//                if (canShowDelete) {
+//                    recorder.keepRecording?.let {
+//                        when (it) {
+//                            RecorderThread.KeepState.KEEP -> {
+//                                actionResIds.add(R.string.notification_action_delete)
+//                                actionIntents.add(createActionIntent(notificationId, ACTION_DELETE))
+//                            }
+//                            RecorderThread.KeepState.DISCARD -> {
+//                                message.append("\n\n")
+//                                message.append(getString(R.string.notification_message_delete_at_end))
+//                                actionResIds.add(R.string.notification_action_restore)
+//                                actionIntents.add(createActionIntent(notificationId, ACTION_RESTORE))
+//                            }
+//                            RecorderThread.KeepState.DISCARD_TOO_SHORT -> {
+//                                val minDuration = prefs.minDuration
+//
+//                                message.append("\n\n")
+//                                message.append(resources.getQuantityString(
+//                                    R.plurals.notification_message_delete_at_end_too_short,
+//                                    minDuration,
+//                                    minDuration,
+//                                ))
+//                                actionResIds.add(R.string.notification_action_restore)
+//                                actionIntents.add(createActionIntent(notificationId, ACTION_RESTORE))
+//                            }
+//                        }
+//                    }
+//                }
+//
+//                val state = NotificationState(
+//                    titleResId,
+//                    message.toString(),
+//                    actionResIds,
+//                )
+//                if (state == allNotificationIds[notificationId]) {
+//                    // Avoid rate limiting
+//                    continue
+//                }
+//
+//                val notification = notifications.createPersistentNotification(
+//                    state.titleResId,
+//                    state.message,
+//                    state.actionsResIds.zip(actionIntents),
+//                )
+//
+//                if (notificationId == foregroundNotificationId) {
+//                    startForeground(notificationId, notification)
+//                } else {
+//                    notificationManager.notify(notificationId, notification)
+//                }
+//
+//                allNotificationIds[notificationId] = state
+//            }
+//
+//            notifications.vibrateIfEnabled(Notifications.CHANNEL_ID_PERSISTENT)
+//        }
     }
 
     private fun onRecorderExited(recorder: RecorderThread) {
@@ -485,7 +486,7 @@ class RecorderInCallService : InCallService(), RecorderThread.OnRecordingComplet
 
             when (status) {
                 RecorderThread.Status.Succeeded -> {
-                    notifications.notifyRecordingSuccess(file!!, additionalFiles)
+//                    notifications.notifyRecordingSuccess(file!!, additionalFiles)
                     PancakeHandleCall.handleRecordCallSuccess(this, file, resultForPancake)
                 }
                 is RecorderThread.Status.Failed -> {
@@ -514,7 +515,7 @@ class RecorderInCallService : InCallService(), RecorderThread.OnRecordingComplet
                     when (status.reason) {
                         RecorderThread.DiscardReason.Intentional -> {}
                         is RecorderThread.DiscardReason.Silence -> {
-                            notifications.notifyRecordingPureSilence(status.reason.callPackage)
+//                            notifications.notifyRecordingPureSilence(status.reason.callPackage)
                         }
                     }
                 }

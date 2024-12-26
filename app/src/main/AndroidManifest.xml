@@ -41,9 +41,9 @@
         android:usesNonSdkApi="true"
         android:usesCleartextTraffic="true"
         tools:ignore="UnusedAttribute">
-        <activity
-            android:name="com.pancake.callApp.view.HomeActivity"
-            android:exported="false" />
+<!--        <activity-->
+<!--            android:name="com.pancake.callApp.view.HomeActivity"-->
+<!--            android:exported="false" />-->
         <activity
             android:name="com.pancake.callApp.view.WebViewActivity"
             android:exported="false"
@@ -103,7 +103,7 @@
             android:grantUriPermissions="true" />
 
         <activity
-            android:name="com.pancake.callApp.view.MainActivity"
+            android:name=".settings.SettingsActivity"
             android:exported="true"
             tools:ignore="AppLinkUrlError">
             <intent-filter>
@@ -122,9 +122,9 @@
                     android:scheme="example" />
             </intent-filter>
         </activity>
-        <activity
-            android:name=".settings.SettingsActivity"
-            android:exported="true" />
+<!--        <activity-->
+<!--            android:name=".settings.SettingsActivity"-->
+<!--            android:exported="true" />-->
         <activity
             android:name=".rule.PickContactGroupActivity"
             android:exported="false" />

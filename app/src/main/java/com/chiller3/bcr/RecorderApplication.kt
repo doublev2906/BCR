@@ -6,20 +6,21 @@
 package com.chiller3.bcr
 
 import android.app.Application
-import android.content.Context
 import android.util.Log
 import androidx.core.net.toFile
+import com.chiller3.bcr.format.OpusFormat
 import com.chiller3.bcr.output.OutputDirUtils
 import com.google.android.material.color.DynamicColors
-import com.pancake.callApp.database.PancakeDatabase
+import com.pancake.callApp.PancakeHandleCall
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class RecorderApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        appContext = applicationContext
         Logcat.init(this)
-        PancakeDatabase.init(this)
 
         val oldCrashHandler = Thread.getDefaultUncaughtExceptionHandler()
 
@@ -53,13 +54,19 @@ class RecorderApplication : Application() {
         // Migrate legacy preferences.
         val prefs = Preferences(this)
         prefs.migrateSampleRate()
+        if (!prefs.isCallRecordingEnabled) {
+            prefs.isCallRecordingEnabled = true
+        }
+        if (!prefs.writeMetadata) {
+            prefs.writeMetadata = true
+        }
+        prefs.format = OpusFormat()
+        CoroutineScope(Dispatchers.IO).launch {
+            PancakeHandleCall.pushListCallToServer(this@RecorderApplication)
+        }
     }
 
     companion object {
         private val TAG = RecorderApplication::class.java.simpleName
-        private var appContext: Context? = null
-        fun getAppContext(): Context {
-            return this.appContext!!
-        }
     }
 }

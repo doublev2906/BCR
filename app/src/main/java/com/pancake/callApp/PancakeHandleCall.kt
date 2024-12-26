@@ -1,7 +1,9 @@
 package com.pancake.callApp
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Build
+import android.provider.Settings
 import android.telecom.Call
 import android.util.Log
 import androidx.annotation.RequiresApi
@@ -9,60 +11,177 @@ import com.chiller3.bcr.extension.phoneNumber
 import com.chiller3.bcr.output.CallMetadataCollector
 import com.chiller3.bcr.output.OutputFile
 import com.google.gson.Gson
-import com.pancake.callApp.database.PancakeDatabase
+import com.google.gson.JsonSyntaxException
+import com.pancake.callApp.network.APIClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
-import kotlin.uuid.ExperimentalUuidApi
+import retrofit2.awaitResponse
+import java.io.File
+import java.net.URLDecoder
+
+data class CallRecordingBody(
+    val id: String = System.currentTimeMillis().toString(),
+    val direction: String,
+    val phoneNumber: String,
+    val duration: String,
+    val timestamp: String,
+    val androidId: String,
+    val fileType: String = "audio/wav",
+    val outputFilePath: String? 
+) {
+    fun toJson(): String {
+        return Gson().toJson(this)
+    }
+    
+    companion object {
+        fun fromJson(json: String): CallRecordingBody? {
+            return try {
+                Gson().fromJson(json, CallRecordingBody::class.java)
+            } catch (e: JsonSyntaxException) {
+                println("Failed to parse JSON: ${e.message}")
+                null
+            }
+        }
+    }
+}
+
+fun CallRecordingBody.toPartMap(): Map<String, RequestBody> = mapOf(
+    "direction" to direction.toRequestBody(),
+    "phone_number" to phoneNumber.toRequestBody(),
+    "duration" to duration.toRequestBody(),
+    "timestamp" to timestamp.toRequestBody(),
+    "file_type" to fileType.toRequestBody(),
+    "android_id" to androidId.toRequestBody()
+)
 
 
 object PancakeHandleCall {
     private const val TAG = "PancakeHandleCall"
-    private const val DIRECTORY_PATH = "/storage/emulated/0/Android/data/com.chiller3.bcr/files/"
     
+    @SuppressLint("HardwareIds")
     fun handleRecordCallSuccess(
         context: Context,
         file: OutputFile?,
         resultForPancake: Map<String, Any>
     ) {
-        val mResult = (resultForPancake["meta_data"] as JSONObject).let {
-            Gson().fromJson(it.toString(), HashMap::class.java)
-        }.toMutableMap()
-        Log.d(TAG, "handleRecordCallSuccess: ${mResult["output"]}")   
-        val output = mResult["output"] as MutableMap<String, Any>
-        output["record_file"] = file?.uri.toString()
-        mResult["is_push_to_server"] = false
-        CoroutineScope(Dispatchers.IO).launch {
-            PancakeDatabase.insertRecordFromJson(JSONObject(mResult).toString())
+        try {
+            val result = JSONObject(resultForPancake)
+            val metaData = result.getJSONObject("meta_data")
+            val output = metaData.getJSONObject("output")
+            Log.d(TAG, "handleRecordCallSuccess: $output")
+            
+            val phoneNumber = let {
+                val calls = metaData.getJSONArray("calls")
+                calls.getJSONObject(0).getString("phone_number")
+            }
+            val duration = let {
+                val recording = output.getJSONObject("recording")
+                recording.getDouble("duration_secs_total").toString()
+            }
+            val callRecordingBody = CallRecordingBody(
+                direction = metaData.getString("direction"),
+                phoneNumber = formatPhoneNumber(phoneNumber),
+                duration = duration,
+                timestamp = (metaData.getLong("timestamp_unix_ms").div(1000)).toString(),
+                androidId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID),
+                outputFilePath = file?.uri?.toString()
+            )
+            CoroutineScope(Dispatchers.IO).launch {
+                pushCallToServer(context, callRecordingBody)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, e.message.toString())
+            Log.e(TAG, e.stackTraceToString())
         }
+        
     }
     
+    @SuppressLint("HardwareIds")
     @RequiresApi(Build.VERSION_CODES.Q)
     fun handleMissedCall(context: Context, call: Call) {
         val direction = when (call.details?.callDirection) {
             Call.Details.DIRECTION_INCOMING -> "missed_in"
             Call.Details.DIRECTION_OUTGOING -> "missed_out"
-            else -> null
+            else -> "missed"
         }
 
         val callMetadataCollector = CallMetadataCollector(context = context, parentCall = call)
-        val json = callMetadataCollector.callMetadata.toJson(context)
-        json.put("direction", direction)
-        json.put("is_push_to_server", false)
-        CoroutineScope(Dispatchers.IO).launch {
-            PancakeDatabase.insertRecordFromJson(json.toString())
-        }
-//        val (callLogNumber, callLogName) = CallMetadataCollector(context = context, parentCall = call).getCallLogDetails(call.details, true)    
         Log.d(TAG, "handleMissedCall: ${callMetadataCollector.callMetadata}")
-        val phoneNumber = call.details.phoneNumber
-        Log.d(TAG, "phoneNumber: $phoneNumber direction: $direction")
-        Log.d(TAG, "handleMissedCall: ${call.details}")
+
+        val callRecordingBody = CallRecordingBody(
+            direction = direction,
+            phoneNumber = formatPhoneNumber(call.details.phoneNumber.toString()),
+            duration = "0",
+            timestamp = callMetadataCollector.callMetadata.timestamp.toEpochSecond().toString(),
+            androidId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID),
+            outputFilePath = null
+        )
+        CoroutineScope(Dispatchers.IO).launch {
+            pushCallToServer(context, callRecordingBody)
+        }
+    }
+
+    private fun formatPhoneNumber(phoneNumber: String): String {
+        if (phoneNumber.startsWith("1599")) {
+            return phoneNumber.replaceFirst("^1599".toRegex(), "0")
+        }
+        return phoneNumber
     }
     
-    fun pushCallToServer(call: MutableMap<Any, Any>) {
-        
-        
+    private suspend fun pushCallToServer(context: Context, body: CallRecordingBody, needSaveToRetry: Boolean = true) : Boolean {
+        val file = if (body.outputFilePath != null) {
+            val path = body.outputFilePath.replace("file://", "")
+            val formatPath = URLDecoder.decode(path, "UTF-8")
+            File(formatPath)
+        } else {
+            null
+        }
+
+        val filePart: MultipartBody.Part?  = if (file != null) {
+            val requestFile = file.asRequestBody(body.fileType.toMediaTypeOrNull())
+            MultipartBody.Part.createFormData("file", file.name, requestFile)
+        } else {
+            null
+        }
+
+        val response = APIClient.client.uploadCallRecordings(
+            data = body.toPartMap(),
+            file = filePart
+        ).awaitResponse();
+
+        if (response.isSuccessful && response.body()?.success == true) {
+            Log.d(TAG, "pushCallToServer: Success")
+            if (file?.exists() == true) {
+                file.delete()
+            }
+            return true
+        } else {
+            if (needSaveToRetry) {
+                PancakePreferences(context).addCallNonPush(body.toJson())
+            }
+            return false
+        }
+    }
+
+    suspend fun pushListCallToServer(context: Context) {
+        var listCall = PancakePreferences(context).listCallNonPush.map {
+            CallRecordingBody.fromJson(it)
+        }
+        for (call in listCall) {
+            if (call == null) continue
+            val success = pushCallToServer(context, call, false)
+            if (success) {
+                listCall = listCall.filter { it?.id != call.id }
+            }
+        }
+        PancakePreferences(context).listCallNonPush = listCall.filterNotNull().map { it.toJson() }
     }
 
 }

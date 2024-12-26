@@ -230,13 +230,13 @@ class DirectBootMigrationService : Service() {
 
     private fun onSuccess(file: OutputFile, additionalFiles: List<OutputFile>) {
         handler.post {
-            notifications.notifyRecordingSuccess(file, additionalFiles)
+//            notifications.notifyRecordingSuccess(file, additionalFiles)
         }
     }
 
     private fun onFailure(errorMsg: String?) {
         handler.post {
-            notifications.notifyMigrationFailure(errorMsg)
+//            notifications.notifyMigrationFailure(errorMsg)
         }
     }
 }

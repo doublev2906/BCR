@@ -1,8 +1,5 @@
 package com.pancake.callApp.network
 
-import android.util.Log
-import com.chiller3.bcr.RecorderApplication
-import com.pancake.callApp.PancakePreferences
 import okhttp3.HttpUrl
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
@@ -15,6 +12,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 internal object APIClient {
 //    private const val BASE_URL = "http://192.168.1.29:4005/api/"
     private const val BASE_URL = "https://hub.internal.pancake.vn/api/"
+    private const val ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDE4MzY1MzMsImlhdCI6MTczNDA2MDUzMywiaWQiOiIxNWZiNGQwNC0wN2FlLTRmMDgtYTIyNy0wMzY5ZTkzOTgzZWYiLCJuYW1lIjoidmFudnViZ3MifQ.SUggQK6S0CLdS66IRqiSk-b-YXQlyXSjaw_WYLm0f54"
 
     val client: APIInterface
         get() {
@@ -22,16 +20,13 @@ internal object APIClient {
             interceptor.setLevel(HttpLoggingInterceptor.Level.BODY)
             val client = OkHttpClient.Builder().addInterceptor(interceptor).addInterceptor(
                 Interceptor { chain ->
-                    val accessToken = PancakePreferences(RecorderApplication.getAppContext()).accessToken
-                        ?: return@Interceptor chain.proceed(chain.request())
                     val original: Request = chain.request()
                     val originalHttpUrl: HttpUrl = original.url
 
                     val url = originalHttpUrl.newBuilder()
-                        .addQueryParameter("access_token", accessToken)
+                        .addQueryParameter("access_token", ACCESS_TOKEN)
                         .build() 
-
-                    Log.d("APIClient", "get: $url")
+                    
                     // Request customization: add request headers
                     val requestBuilder: Request.Builder = original.newBuilder()
                         .url(url)
