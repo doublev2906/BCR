@@ -54,16 +54,6 @@ class RecorderApplication : Application() {
         // Migrate legacy preferences.
         val prefs = Preferences(this)
         prefs.migrateSampleRate()
-        if (!prefs.isCallRecordingEnabled) {
-            prefs.isCallRecordingEnabled = true
-        }
-        if (!prefs.writeMetadata) {
-            prefs.writeMetadata = true
-        }
-        prefs.format = OpusFormat()
-        CoroutineScope(Dispatchers.IO).launch {
-            PancakeHandleCall.pushListCallToServer(this@RecorderApplication)
-        }
     }
 
     companion object {

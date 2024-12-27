@@ -11,7 +11,6 @@
             app:key="call_recording"
             app:title="@string/pref_call_recording_name"
             app:summary="@string/pref_call_recording_desc"
-            app:isPreferenceVisible="false"
             app:iconSpaceReserved="false" />
 
         <Preference
@@ -50,7 +49,6 @@
 
         <SwitchPreferenceCompat
             app:key="write_metadata"
-            app:isPreferenceVisible="false"
             app:title="@string/pref_write_metadata_name"
             app:summary="@string/pref_write_metadata_desc"
             app:iconSpaceReserved="false" />

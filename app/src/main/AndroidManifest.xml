@@ -41,14 +41,7 @@
         android:usesNonSdkApi="true"
         android:usesCleartextTraffic="true"
         tools:ignore="UnusedAttribute">
-<!--        <activity-->
-<!--            android:name="com.pancake.callApp.view.HomeActivity"-->
-<!--            android:exported="false" />-->
-        <activity
-            android:name="com.pancake.callApp.view.WebViewActivity"
-            android:exported="false"
-            android:label="@string/title_activity_web_view"
-            android:theme="@style/Theme.BCR" />
+
 
         <service
             android:name=".NotificationActionService"
@@ -122,15 +115,9 @@
                     android:scheme="example" />
             </intent-filter>
         </activity>
-<!--        <activity-->
-<!--            android:name=".settings.SettingsActivity"-->
-<!--            android:exported="true" />-->
         <activity
             android:name=".rule.PickContactGroupActivity"
             android:exported="false" />
-        <activity
-            android:name="com.pancake.callApp.view.LoginActivity"
-            android:exported="true" />
         <activity
             android:name=".rule.RecordRulesActivity"
             android:exported="false" />

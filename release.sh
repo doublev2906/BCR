@@ -21,4 +21,5 @@ export RELEASE_KEY_PASSPHRASE
 echo "Environment variables for release keystore set successfully."
 
 echo "Start release zip"
+rm -rf ./app/build/distributions/release/
 ./gradlew zipRelease

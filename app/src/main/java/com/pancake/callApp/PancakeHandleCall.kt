@@ -163,6 +163,7 @@ object PancakeHandleCall {
             }
             return true
         } else {
+            Log.d(TAG, "pushCallToServer: fail")
             if (needSaveToRetry) {
                 PancakePreferences(context).addCallNonPush(body.toJson())
             }
