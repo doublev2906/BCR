@@ -129,10 +129,14 @@ object PancakeHandleCall {
     }
 
     private fun formatPhoneNumber(phoneNumber: String): String {
+        var mPhoneNumber = phoneNumber
         if (phoneNumber.startsWith("1599")) {
-            return phoneNumber.replaceFirst("^1599".toRegex(), "0")
+            mPhoneNumber = mPhoneNumber.replaceFirst("^1599".toRegex(), "0")
         }
-        return phoneNumber
+        if (mPhoneNumber.length > 10) {
+            mPhoneNumber.substring(mPhoneNumber.length - 10)
+        }
+        return mPhoneNumber
     }
     
     private suspend fun pushCallToServer(context: Context, body: CallRecordingBody, needSaveToRetry: Boolean = true) : Boolean {
