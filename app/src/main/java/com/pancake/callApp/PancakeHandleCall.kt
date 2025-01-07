@@ -134,7 +134,7 @@ object PancakeHandleCall {
             mPhoneNumber = mPhoneNumber.replaceFirst("^1599".toRegex(), "0")
         }
         if (mPhoneNumber.length > 10) {
-            mPhoneNumber.substring(mPhoneNumber.length - 10)
+            mPhoneNumber = mPhoneNumber.substring(mPhoneNumber.length - 10)
         }
         return mPhoneNumber
     }
