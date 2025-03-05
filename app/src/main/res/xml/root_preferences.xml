@@ -13,6 +13,12 @@
             app:summary="@string/pref_call_recording_desc"
             app:iconSpaceReserved="false" />
 
+        <SwitchPreferenceCompat
+            app:key="restart_ril_daemon"
+            app:title="Restart RIL Daemon"
+            app:summary="For android 10 and above, restart the RIL daemon every 6 hour to fix call recording issues"
+            app:iconSpaceReserved="false" />
+
         <Preference
             app:key="record_rules"
             app:persistent="false"

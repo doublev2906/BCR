@@ -12,7 +12,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 internal object APIClient {
 //    private const val BASE_URL = "http://192.168.1.29:4005/api/"
     private const val BASE_URL = "https://hub.internal.pancake.vn/api/"
-    private const val ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDE4MzY1MzMsImlhdCI6MTczNDA2MDUzMywiaWQiOiIxNWZiNGQwNC0wN2FlLTRmMDgtYTIyNy0wMzY5ZTkzOTgzZWYiLCJuYW1lIjoidmFudnViZ3MifQ.SUggQK6S0CLdS66IRqiSk-b-YXQlyXSjaw_WYLm0f54"
+    private const val ACCESS_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDQ4OTM1ODQsImlhdCI6MTczNzExNzU4NCwiaWQiOiIzOWIwZWQ3MC1mZThhLTQzZTUtOTkyNy1hZDQ1MmMzZTE0NDQiLCJuYW1lIjoibmd1eWVuYmFkdXkxMjMifQ.ey7SP55Cb9pTEK7UiK0GWtAAzzATEA2kYC-BWl3iiHI"
 
     val client: APIInterface
         get() {

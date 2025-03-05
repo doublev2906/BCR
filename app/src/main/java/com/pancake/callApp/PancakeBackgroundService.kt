@@ -6,9 +6,12 @@ import android.content.Intent
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.util.concurrent.TimeUnit
 
 class PancakeBackgroundService : Service() {
     override fun onBind(intent: Intent): IBinder? {
@@ -16,6 +19,8 @@ class PancakeBackgroundService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val workRequest = PeriodicWorkRequestBuilder<AdbWorker>(6, TimeUnit.HOURS).build()
+        WorkManager.getInstance(this).enqueue(workRequest)
         val context = this
         val mainHandler = Handler(Looper.getMainLooper())
         mainHandler.post(object : Runnable {

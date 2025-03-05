@@ -26,6 +26,7 @@ kotlinx-coroutines-android = "1.3.9"
 activity = "1.9.3"
 constraintlayout = "2.2.0"
 swiperefreshlayout = "1.1.0"
+work-runtime-ktx = "2.10.0"
 
 [libraries]
 androidx-activity = { group = "androidx.activity", name = "activity-ktx", version.ref = "androidx-activity" }
@@ -49,6 +50,7 @@ room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "
 room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "kotlinx-coroutines-android" }
+work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "work-runtime-ktx" }
 
 # Test
 junit = { group = "androidx.test.ext", name = "junit", version.ref = "junit" }

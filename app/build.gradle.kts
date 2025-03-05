@@ -239,6 +239,7 @@ dependencies {
     implementation(libs.androidx.constraintlayout)
     implementation(libs.glide)
     implementation(libs.androidx.swiperefreshlayout)
+    implementation(libs.work.runtime.ktx)
     ksp(libs.room.compiler)
     
     

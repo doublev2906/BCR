@@ -46,6 +46,7 @@ class Preferences(initialContext: Context) {
 
         const val PREF_ADD_CONTACT_RULE = "add_contact_rule"
         const val PREF_ADD_CONTACT_GROUP_RULE = "add_contact_group_rule"
+        const val PREF_RESTART_RIL_DAEMON = "restart_ril_daemon"
 
         // Not associated with a UI preference
         private const val PREF_DEBUG_MODE = "debug_mode"
@@ -306,6 +307,10 @@ class Preferences(initialContext: Context) {
     var isCallRecordingEnabled: Boolean
         get() = prefs.getBoolean(PREF_CALL_RECORDING, false)
         set(enabled) = prefs.edit { putBoolean(PREF_CALL_RECORDING, enabled) }
+    
+    var isRestartRilDaemon: Boolean
+        get() = prefs.getBoolean(PREF_RESTART_RIL_DAEMON, false)
+        set(enabled) = prefs.edit { putBoolean(PREF_RESTART_RIL_DAEMON, enabled) }
 
     /** List of rules to determine whether to automatically record. */
     var recordRules: List<RecordRule>?
