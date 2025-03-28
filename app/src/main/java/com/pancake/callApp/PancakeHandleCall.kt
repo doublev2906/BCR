@@ -140,53 +140,68 @@ object PancakeHandleCall {
     }
     
     private suspend fun pushCallToServer(context: Context, body: CallRecordingBody, needSaveToRetry: Boolean = true) : Boolean {
-        val file = if (body.outputFilePath != null) {
-            val path = body.outputFilePath.replace("file://", "")
-            val formatPath = URLDecoder.decode(path, "UTF-8")
-            File(formatPath)
-        } else {
-            null
-        }
-
-        val filePart: MultipartBody.Part?  = if (file != null) {
-            val requestFile = file.asRequestBody(body.fileType.toMediaTypeOrNull())
-            MultipartBody.Part.createFormData("file", file.name, requestFile)
-        } else {
-            null
-        }
-
-        val response = APIClient.client.uploadCallRecordings(
-            data = body.toPartMap(),
-            file = filePart
-        ).awaitResponse();
-
-        if (response.isSuccessful && response.body()?.success == true) {
-            Log.d(TAG, "pushCallToServer: Success")
-            if (file?.exists() == true) {
-                file.delete()
+        try {
+            val file = if (body.outputFilePath != null) {
+                val path = body.outputFilePath.replace("file://", "")
+                val formatPath = URLDecoder.decode(path, "UTF-8")
+                File(formatPath)
+            } else {
+                null
             }
-            return true
-        } else {
-            Log.d(TAG, "pushCallToServer: fail")
+            
+            if (file == null || !file.exists()) {
+                Log.e(TAG, "pushCallToServer: file not found")
+                return true
+            }
+            val requestFile = file.asRequestBody(body.fileType.toMediaTypeOrNull())
+            val filePart: MultipartBody.Part?  = MultipartBody.Part.createFormData("file", file.name, requestFile)
+
+            val response = APIClient.client.uploadCallRecordings(
+                data = body.toPartMap(),
+                file = filePart
+            ).awaitResponse();
+            Log.d(TAG, "pushCallToServer: ${response.body()}")
+            if (response.isSuccessful && response.body()?.success == true) {
+                Log.d(TAG, "pushCallToServer: Success")
+                if (file?.exists() == true) {
+                    file.delete()
+                }
+                return true
+            } else {
+                Log.d(TAG, "pushCallToServer: fail")
+                if (needSaveToRetry) {
+                    PancakePreferences(context).addCallNonPush(body.toJson())
+                }
+                return false
+            }
+        } catch (e: Exception) {
             if (needSaveToRetry) {
                 PancakePreferences(context).addCallNonPush(body.toJson())
             }
             return false
         }
+
     }
 
     suspend fun pushListCallToServer(context: Context) {
-        var listCall = PancakePreferences(context).listCallNonPush.map {
-            CallRecordingBody.fromJson(it)
-        }
-        for (call in listCall) {
-            if (call == null) continue
-            val success = pushCallToServer(context, call, false)
-            if (success) {
-                listCall = listCall.filter { it?.id != call.id }
+        try {
+            var listCall = PancakePreferences(context).listCallNonPush.map {
+                CallRecordingBody.fromJson(it)
             }
+            if (listCall.isEmpty()) return
+            val listCallPushFailed = mutableListOf<CallRecordingBody>()
+            for (call in listCall) {
+                if (call == null) continue
+                val success = pushCallToServer(context, call, false)
+                if (!success) {
+                    listCallPushFailed.add(call)
+                }
+            }
+            PancakePreferences(context).listCallNonPush = listCallPushFailed.map { it.toJson() }
+        }  catch (e: Exception) {
+            Log.e(TAG, e.message.toString())
+            Log.e(TAG, e.stackTraceToString())
         }
-        PancakePreferences(context).listCallNonPush = listCall.filterNotNull().map { it.toJson() }
     }
 
 }

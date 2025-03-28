@@ -9,3 +9,5 @@
 .cxx
 .kotlin
 local.properties
+/app/build
+/app/debug

@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# Pass: pancake123
 # Path to the keystore file
 export RELEASE_KEYSTORE=/Users/pancake/development/pancake_bcr_release_key.jks
 

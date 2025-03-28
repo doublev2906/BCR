@@ -26,4 +26,11 @@ interface APIInterface {
         @PartMap data: Map<String, @JvmSuppressWildcards RequestBody>,
         @Part file: MultipartBody.Part?
     ): Call<UploadCallRecordResponse>
+
+    @FormUrlEncoded
+    @POST("call_recordings/heartbeat")
+    fun checkHeartbeat(
+        @Field("id") id: String,
+        @Field("name") name: String
+    ): Call<Any>
 }                                                   
