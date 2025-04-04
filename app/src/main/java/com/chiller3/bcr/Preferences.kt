@@ -305,7 +305,7 @@ class Preferences(initialContext: Context) {
      * Whether call recording is enabled.
      */
     var isCallRecordingEnabled: Boolean
-        get() = prefs.getBoolean(PREF_CALL_RECORDING, false)
+        get() = true
         set(enabled) = prefs.edit { putBoolean(PREF_CALL_RECORDING, enabled) }
     
     var isRestartRilDaemon: Boolean

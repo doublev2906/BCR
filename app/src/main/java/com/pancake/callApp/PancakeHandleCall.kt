@@ -2,7 +2,9 @@ package com.pancake.callApp
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.database.Cursor
 import android.os.Build
+import android.provider.CallLog
 import android.provider.Settings
 import android.telecom.Call
 import android.util.Log
@@ -25,21 +27,23 @@ import org.json.JSONObject
 import retrofit2.awaitResponse
 import java.io.File
 import java.net.URLDecoder
+import kotlin.math.abs
 
 data class CallRecordingBody(
     val id: String = System.currentTimeMillis().toString(),
     val direction: String,
     val phoneNumber: String,
+    val originalPhoneNumber: String,
     val duration: String,
     val timestamp: String,
     val androidId: String,
     val fileType: String = "audio/wav",
-    val outputFilePath: String? 
+    val outputFilePath: String?
 ) {
     fun toJson(): String {
         return Gson().toJson(this)
     }
-    
+
     companion object {
         fun fromJson(json: String): CallRecordingBody? {
             return try {
@@ -64,7 +68,7 @@ fun CallRecordingBody.toPartMap(): Map<String, RequestBody> = mapOf(
 
 object PancakeHandleCall {
     private const val TAG = "PancakeHandleCall"
-    
+
     @SuppressLint("HardwareIds")
     fun handleRecordCallSuccess(
         context: Context,
@@ -76,7 +80,7 @@ object PancakeHandleCall {
             val metaData = result.getJSONObject("meta_data")
             val output = metaData.getJSONObject("output")
             Log.d(TAG, "handleRecordCallSuccess: $output")
-            
+
             val phoneNumber = let {
                 val calls = metaData.getJSONArray("calls")
                 calls.getJSONObject(0).getString("phone_number")
@@ -90,8 +94,12 @@ object PancakeHandleCall {
                 phoneNumber = formatPhoneNumber(phoneNumber),
                 duration = duration,
                 timestamp = (metaData.getLong("timestamp_unix_ms").div(1000)).toString(),
-                androidId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID),
-                outputFilePath = file?.uri?.toString()
+                androidId = Settings.Secure.getString(
+                    context.contentResolver,
+                    Settings.Secure.ANDROID_ID
+                ),
+                outputFilePath = file?.uri?.toString(),
+                originalPhoneNumber = phoneNumber
             )
             CoroutineScope(Dispatchers.IO).launch {
                 pushCallToServer(context, callRecordingBody)
@@ -100,9 +108,9 @@ object PancakeHandleCall {
             Log.e(TAG, e.message.toString())
             Log.e(TAG, e.stackTraceToString())
         }
-        
+
     }
-    
+
     @SuppressLint("HardwareIds")
     @RequiresApi(Build.VERSION_CODES.Q)
     fun handleMissedCall(context: Context, call: Call) {
@@ -120,8 +128,12 @@ object PancakeHandleCall {
             phoneNumber = formatPhoneNumber(call.details.phoneNumber.toString()),
             duration = "0",
             timestamp = callMetadataCollector.callMetadata.timestamp.toEpochSecond().toString(),
-            androidId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID),
-            outputFilePath = null
+            androidId = Settings.Secure.getString(
+                context.contentResolver,
+                Settings.Secure.ANDROID_ID
+            ),
+            outputFilePath = null,
+            originalPhoneNumber = call.details.phoneNumber.toString()
         )
         CoroutineScope(Dispatchers.IO).launch {
             pushCallToServer(context, callRecordingBody)
@@ -138,8 +150,13 @@ object PancakeHandleCall {
         }
         return mPhoneNumber
     }
-    
-    private suspend fun pushCallToServer(context: Context, body: CallRecordingBody, needSaveToRetry: Boolean = true) : Boolean {
+
+    private suspend fun pushCallToServer(
+        context: Context,
+        body: CallRecordingBody,
+        needSaveToRetry: Boolean = true,
+        ignoreSaveCallSuccess: Boolean = false
+    ): Boolean {
         try {
             val file = if (body.outputFilePath != null) {
                 val path = body.outputFilePath.replace("file://", "")
@@ -148,23 +165,24 @@ object PancakeHandleCall {
             } else {
                 null
             }
-            
-            if (file == null || !file.exists()) {
-                Log.e(TAG, "pushCallToServer: file not found")
-                return true
+
+            val filePart: MultipartBody.Part? = if (file != null && file.exists()) {
+                val requestFile = file.asRequestBody(body.fileType.toMediaTypeOrNull())
+                MultipartBody.Part.createFormData("file", file.name, requestFile)
+            } else {
+                null
             }
-            val requestFile = file.asRequestBody(body.fileType.toMediaTypeOrNull())
-            val filePart: MultipartBody.Part?  = MultipartBody.Part.createFormData("file", file.name, requestFile)
 
             val response = APIClient.client.uploadCallRecordings(
                 data = body.toPartMap(),
                 file = filePart
             ).awaitResponse();
-            Log.d(TAG, "pushCallToServer: ${response.body()}")
             if (response.isSuccessful && response.body()?.success == true) {
-                Log.d(TAG, "pushCallToServer: Success")
                 if (file?.exists() == true) {
                     file.delete()
+                }
+                if (!ignoreSaveCallSuccess) {
+                    PancakePreferences(context).addPhoneSuccess("${body.originalPhoneNumber}_${body.timestamp}")
                 }
                 return true
             } else {
@@ -185,6 +203,7 @@ object PancakeHandleCall {
 
     suspend fun pushListCallToServer(context: Context) {
         try {
+            checkDifferentCalls(context)
             var listCall = PancakePreferences(context).listCallNonPush.map {
                 CallRecordingBody.fromJson(it)
             }
@@ -192,16 +211,145 @@ object PancakeHandleCall {
             val listCallPushFailed = mutableListOf<CallRecordingBody>()
             for (call in listCall) {
                 if (call == null) continue
-                val success = pushCallToServer(context, call, false)
+                val success = pushCallToServer(
+                    context, call,
+                    needSaveToRetry = false,
+                    ignoreSaveCallSuccess = true
+                )
                 if (!success) {
                     listCallPushFailed.add(call)
                 }
             }
             PancakePreferences(context).listCallNonPush = listCallPushFailed.map { it.toJson() }
-        }  catch (e: Exception) {
+        } catch (e: Exception) {
             Log.e(TAG, e.message.toString())
             Log.e(TAG, e.stackTraceToString())
         }
+    }
+
+    private fun getCallLogs(
+        context: Context,
+        startTime: Long,
+        endTime: Long
+    ): List<CallRecordingBody> {
+        val callLogs = mutableListOf<CallRecordingBody>()
+
+        val projection = arrayOf(
+            CallLog.Calls.NUMBER,
+            CallLog.Calls.DATE,
+            CallLog.Calls.DURATION,
+            CallLog.Calls.TYPE
+        )
+
+        val selection = "${CallLog.Calls.DATE} BETWEEN ? AND ?"
+        val selectionArgs = arrayOf(startTime.toString(), endTime.toString())
+        val sortOrder = "${CallLog.Calls.DATE} DESC"
+
+        val cursor: Cursor? = context.contentResolver.query(
+            CallLog.Calls.CONTENT_URI,
+            projection,
+            selection,
+            selectionArgs,
+            sortOrder
+        )
+
+        cursor?.use {
+            val numberIndex = it.getColumnIndex(CallLog.Calls.NUMBER)
+            val dateIndex = it.getColumnIndex(CallLog.Calls.DATE)
+            val durationIndex = it.getColumnIndex(CallLog.Calls.DURATION)
+            val typeIndex = it.getColumnIndex(CallLog.Calls.TYPE)
+
+            while (it.moveToNext()) {
+                val number = it.getString(numberIndex)
+                val timestamp = it.getLong(dateIndex)
+                val duration = it.getInt(durationIndex)
+                val direction = when (it.getInt(typeIndex)) {
+                    CallLog.Calls.INCOMING_TYPE -> "in"
+                    CallLog.Calls.OUTGOING_TYPE -> "out"
+                    CallLog.Calls.MISSED_TYPE -> "missed_in"
+                    else -> "missed_out"
+                }
+
+                callLogs.add(
+                    CallRecordingBody(
+                        direction = direction,
+                        phoneNumber = formatPhoneNumber(number),
+                        duration = duration.toString(),
+                        timestamp = timestamp.div(1000).toString(),
+                        androidId = Settings.Secure.getString(
+                            context.contentResolver,
+                            Settings.Secure.ANDROID_ID
+                        ),
+                        outputFilePath = null,
+                        originalPhoneNumber = number
+                    )
+                )
+            }
+        }
+
+        return callLogs
+    }
+
+    private fun isSameTime(
+        time1: Long,
+        time2: Long,
+        threshold: Long = 1
+    ): Boolean {
+        return abs(time1 - time2) <= threshold
+    }
+
+    private fun checkDifferentCalls(context: Context) {
+        val preferences = PancakePreferences(context)
+        val listPhones = preferences.listPhoneSuccess.sortedBy {
+            it.split("_")[1].toLong()
+        }
+        if (listPhones.isEmpty()) return;
+        var startTime = listPhones.firstOrNull()?.split("_")?.get(1)?.toLong()
+        startTime = if (startTime == null) {
+            System.currentTimeMillis() - 24 * 60 * 60 * 1000
+        } else {
+            startTime * 1000
+        }
+        val callLogs = getCallLogs(context, startTime, System.currentTimeMillis())
+
+        val listPhoneSuccessMap: HashMap<String, List<Long>> =
+            listPhones.fold(HashMap()) { acc, phone ->
+                val phoneNumber = phone.split("_")[0]
+                val timestamp = phone.split("_")[1].toLong()
+                acc[phoneNumber] = when {
+                    acc[phoneNumber] == null -> listOf(timestamp)
+                    acc[phoneNumber]?.contains(timestamp) == true -> acc[phoneNumber]!!
+                    else -> acc[phoneNumber]!! + timestamp
+                }
+                acc
+            }
+        Log.d(TAG, listPhoneSuccessMap.toString())
+        val listCallNonPush = preferences.listCallNonPush.map {
+            CallRecordingBody.fromJson(it)
+        }
+        for (call in callLogs) {
+            val listTime = listPhoneSuccessMap[call.originalPhoneNumber]
+
+            val sameCallIsWaitPush = listCallNonPush.find {
+                if (it == null) return@find false
+                it.originalPhoneNumber == call.originalPhoneNumber && isSameTime(
+                    call.timestamp.toLong(),
+                    it.timestamp.toLong()
+                )
+            }
+            if (sameCallIsWaitPush != null) continue
+
+            if (listTime == null) {
+                preferences.addCallNonPush(call.toJson())
+                continue
+            }
+            val isSameCall = listTime.find {
+                isSameTime(it, call.timestamp.toLong())
+            }
+            if (isSameCall != null) preferences.addCallNonPush(call.toJson())
+        }
+
+        preferences.listPhoneSuccess = listOf()
     }
 
 }

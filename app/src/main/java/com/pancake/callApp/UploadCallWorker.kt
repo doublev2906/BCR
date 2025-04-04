@@ -1,29 +1,22 @@
 package com.pancake.callApp
 
 import android.content.Context
+import android.provider.Settings
 import android.util.Log
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
-import androidx.work.Worker
+import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import java.util.concurrent.TimeUnit
+import com.pancake.callApp.network.APIClient
+import retrofit2.awaitResponse
 
-class UploadCallWorker(context: Context, params: WorkerParameters) : Worker(context, params) {
-    override fun doWork(): Result {
-        CoroutineScope(Dispatchers.IO).launch {
+class UploadCallWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
+    override suspend fun doWork(): Result {
+        try {
+            val androidID = Settings.Secure.getString(applicationContext.contentResolver, Settings.Secure.ANDROID_ID)
+            APIClient.client.checkHeartbeat(id = androidID, name = android.os.Build.MODEL).awaitResponse()
             PancakeHandleCall.pushListCallToServer(applicationContext)
+        } catch (e: Exception) {
+            Log.d("UploadCallWorker", "Error checking heartbeat: ${e.message}")
         }
-
-        // Re-enqueue the worker
-        val nextWorkRequest = OneTimeWorkRequestBuilder<UploadCallWorker>()
-            .setInitialDelay(5, TimeUnit.MINUTES)
-            .build()
-
-        WorkManager.getInstance(applicationContext).enqueue(nextWorkRequest)
-
         return Result.success()
     }
 }

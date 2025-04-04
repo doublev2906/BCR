@@ -8,10 +8,9 @@ package com.chiller3.bcr
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
-import com.pancake.callApp.HeatBeatWorker
-import com.pancake.callApp.PancakeBackgroundService
 import com.pancake.callApp.UploadCallWorker
 import java.util.concurrent.TimeUnit
 
@@ -22,12 +21,7 @@ class DirectBootMigrationReceiver : BroadcastReceiver() {
         }
 
         context.startService(Intent(context, DirectBootMigrationService::class.java))
-        val uploadCallWorker = OneTimeWorkRequestBuilder<UploadCallWorker>()
-            .setInitialDelay(5, TimeUnit.MINUTES)
-            .build()
-        val heatBeatWorker = OneTimeWorkRequestBuilder<HeatBeatWorker>()
-            .setInitialDelay(1, TimeUnit.MINUTES)
-            .build()
-        WorkManager.getInstance(context).enqueue(arrayListOf(uploadCallWorker, heatBeatWorker))
+        val uploadCallWorker = PeriodicWorkRequestBuilder<UploadCallWorker>(15, TimeUnit.MINUTES).build()
+        WorkManager.getInstance(context).enqueueUniquePeriodicWork("RE_UPLOAD_CALL", ExistingPeriodicWorkPolicy.KEEP, uploadCallWorker)
     }
 }
